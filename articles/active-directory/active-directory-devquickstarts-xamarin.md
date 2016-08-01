@@ -13,7 +13,7 @@
 	ms.tgt_pltfrm="mobile-xamarin"
 	ms.devlang="dotnet"
 	ms.topic="article"
-	ms.date="05/16/2016"
+	ms.date="08/01/2016"
 	ms.author="dastrock"/>
 
 
@@ -102,7 +102,7 @@ public static async Task<List<User>> SearchByAlias(string alias, IPlatformParame
 -	Next, initialize the `AuthenticationContext` - ADAL’s primary class. This is where you pass ADAL the coordinates it needs to communicate with Azure AD. Then call `AcquireTokenAsync(...)`, which accepts the `IPlatformParameters` object and will invoke the authentication flow necessary to return a token to the app.
 
 ```C#
-...
+// ...
     AuthenticationResult authResult = null;
     try
     {
@@ -114,7 +114,7 @@ public static async Task<List<User>> SearchByAlias(string alias, IPlatformParame
         results.Add(new User { error = ee.Message });
         return results;
     }
-...
+// ...
 ```
 - `AcquireTokenAsync(...)` will first attempt to return a token for the requested resource (the Graph API in this case) without prompting the user to enter their credentials (via caching or refreshing old tokens). Only if necessary, it will show the user the Azure AD sign in page before acquiring the requested token.
 
@@ -122,29 +122,29 @@ public static async Task<List<User>> SearchByAlias(string alias, IPlatformParame
 - You can then attach the access token to the Graph API request in the Authorization header:
 
 ```C#
-...
+// ...
     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authResult.AccessToken);
-...
+// ...
 ```
 
 That's all for the `DirectorySearcher` PCL and your app's identity-related code.  All that remains is to call the `SearchByAlias(...)` method in each platform's views, and where necessary add code for correctly handling the UI lifecycle.
 
 ####Android:
-- In `MainActivity.cs`, add a call to `SearchByAlias(...)` in the button click handler:
+- You need to override the `OnActivityResult` lifecycle method to forward any authentication redirects back to the appropriate method.  ADAL provides a helper method for this in Android:
 
 ```C#
-List<User> results = await DirectorySearcher.SearchByAlias(searchTermText.Text, new PlatformParameters(this));
-```
-- You also need to override the `OnActivityResult` lifecycle method to forward any authentication redirects back to the appropriate method.  ADAL provides a helper method for this in Android:
-
-```C#
-...
+// ...
 protected override void OnActivityResult(int requestCode, Result resultCode, Intent data)
 {
     base.OnActivityResult(requestCode, resultCode, data);
     AuthenticationAgentContinuationHelper.SetAuthenticationAgentContinuationEventArgs(requestCode, resultCode, data);
 }
-...
+// ...
+```
+- In `MainActivity.cs`, add a call to `SearchByAlias(...)` in the button click handler:
+
+```C#
+List<User> results = await DirectorySearcher.SearchByAlias(searchTermText.Text, new PlatformParameters(this));
 ```
 
 ####Windows Desktop:
@@ -162,16 +162,16 @@ List<User> results = await DirectorySearcher.SearchByAlias(
 ```C#
 List<User> results = await DirectorySearcher.SearchByAlias(
   SearchTermText.Text,
-  new PlatformParameters(PromptBehavior.Auto, this.Handle));
+  new PlatformParameters(this));
 ```
 
 ####Windows Universal:
 - In Windows Universal, open `MainPage.xaml.cs` and implement the `Search` method, which uses a helper method in a shared project to update UI as necessary.
 
 ```C#
-...
+// ...
     List<User> results = await DirectorySearcherLib.DirectorySearcher.SearchByAlias(SearchTermText.Text, new PlatformParameters(PromptBehavior.Auto, false));
-...
+// ...
 ```
 
 Congratulations! You now have a working Xamarin app that has the ability to authenticate users and securely call Web APIs using OAuth 2.0 across five different platforms. If you haven’t already, now is the time to populate your tenant with some users. Run your DirectorySearcher app, and sign in with one of those users. Search for other users based on their UPN.
